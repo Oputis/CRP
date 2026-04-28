@@ -1,10 +1,18 @@
-import { NextResponse } from 'next/server';
+import { createChatCompletion } from '@/lib/anthropic';
+import { badRequest, ok, parseJson, serverError } from '@/lib/http';
 
 export async function POST(request) {
-  const { messages = [] } = await request.json();
-  const lastUserMessage = [...messages].reverse().find((message) => message.role === 'user')?.content || '';
+  const body = await parseJson(request);
 
-  return NextResponse.json({
-    message: `Sprint 2 backend placeholder received: "${lastUserMessage}"\n\nNext step: wire this route to Anthropic using an environment variable, add rate limits, and keep all provider keys server-side.`,
-  });
+  if (!body || !Array.isArray(body.messages)) {
+    return badRequest('Request body must include a messages array.');
+  }
+
+  try {
+    const message = await createChatCompletion(body.messages);
+    return ok({ message });
+  } catch (error) {
+    console.error('Chat route failed:', error);
+    return serverError(error.message || 'Unable to generate chat response.');
+  }
 }
